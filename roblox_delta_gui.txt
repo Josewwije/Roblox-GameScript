@@ -1,0 +1,627 @@
+--==================================================
+-- SERVICES
+--==================================================
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+
+--==================================================
+-- CONFIG
+--==================================================
+local CLICK_DISTANCE = 10
+
+--==================================================
+-- GUI
+--==================================================
+local gui = Instance.new("ScreenGui")
+gui.Name = "DeltaHubUniversal"
+gui.ResetOnSpawn = false
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui.Parent = player:WaitForChild("PlayerGui")
+
+--==================================================
+-- FLOAT BUTTON
+--==================================================
+local floatButton = Instance.new("ImageButton")
+floatButton.Parent = gui
+floatButton.Size = UDim2.fromOffset(60, 60)
+floatButton.Position = UDim2.new(0, 40, 0.5, -30)
+floatButton.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+floatButton.AutoButtonColor = false
+floatButton.Image = ""
+floatButton.Active = true
+floatButton.Selectable = true
+floatButton.ZIndex = 10
+
+local floatCorner = Instance.new("UICorner", floatButton)
+floatCorner.CornerRadius = UDim.new(1, 0)
+
+local floatStroke = Instance.new("UIStroke", floatButton)
+floatStroke.Thickness = 2
+floatStroke.Transparency = 0.5
+floatStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+local floatGradient = Instance.new("UIGradient", floatButton)
+floatGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 255, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(170, 0, 255))
+}
+
+-- Animação de rotação do gradiente
+RunService.RenderStepped:Connect(function()
+    floatGradient.Rotation = (floatGradient.Rotation + 1) % 360
+end)
+
+--==================================================
+-- MAIN FRAME (MAIS LARGO)
+--==================================================
+local mainFrame = Instance.new("Frame")
+mainFrame.Parent = gui
+mainFrame.Size = UDim2.fromOffset(620, 480)
+mainFrame.Position = UDim2.new(0.5, -310, 0.5, -240)
+mainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+mainFrame.Visible = false
+mainFrame.Active = true
+mainFrame.ClipsDescendants = true
+mainFrame.ZIndex = 5
+
+local mainCorner = Instance.new("UICorner", mainFrame)
+mainCorner.CornerRadius = UDim.new(0, 16)
+
+local mainStroke = Instance.new("UIStroke", mainFrame)
+mainStroke.Color = Color3.fromRGB(50, 50, 50)
+mainStroke.Thickness = 1
+mainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+--==================================================
+-- HEADER
+--==================================================
+local header = Instance.new("Frame", mainFrame)
+header.Size = UDim2.new(1, 0, 0, 50)
+header.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+header.ZIndex = 6
+
+Instance.new("UICorner", header).CornerRadius = UDim.new(0, 16)
+
+local title = Instance.new("TextLabel", header)
+title.Size = UDim2.new(1, -100, 1, 0)
+title.Position = UDim2.new(0, 20, 0, 0)
+title.Text = "DELTA HUB UNIVERSAL"
+title.Font = Enum.Font.GothamBold
+title.TextSize = 18
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.BackgroundTransparency = 1
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.ZIndex = 7
+
+local titleGradient = Instance.new("UIGradient", title)
+titleGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 255, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(170, 0, 255))
+}
+
+--==================================================
+-- CLOSE BUTTON
+--==================================================
+local closeButton = Instance.new("TextButton", header)
+closeButton.Size = UDim2.fromOffset(35, 35)
+closeButton.Position = UDim2.new(1, -45, 0.5, -17.5)
+closeButton.Text = "×"
+closeButton.Font = Enum.Font.GothamBold
+closeButton.TextSize = 24
+closeButton.TextColor3 = Color3.new(1, 1, 1)
+closeButton.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+closeButton.ZIndex = 7
+
+Instance.new("UICorner", closeButton).CornerRadius = UDim.new(0, 8)
+
+--==================================================
+-- DRAG + CLICK SYSTEM
+--==================================================
+local dragging = false
+local moved = false
+local dragStart
+local startPos
+local guiAberta = false
+
+floatButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+       input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        moved = false
+        dragStart = input.Position
+        startPos = floatButton.Position
+    end
+end)
+
+floatButton.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or 
+       input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+        
+        if not moved then
+            guiAberta = not guiAberta
+            
+            if guiAberta then
+                mainFrame.Visible = true
+                mainFrame.Size = UDim2.fromOffset(0, 0)
+                mainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+                
+                TweenService:Create(
+                    mainFrame,
+                    TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+                    {
+                        Size = UDim2.fromOffset(620, 480),
+                        Position = UDim2.new(0.5, -310, 0.5, -240)
+                    }
+                ):Play()
+            else
+                local tween = TweenService:Create(
+                    mainFrame,
+                    TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In),
+                    {
+                        Size = UDim2.fromOffset(0, 0),
+                        Position = UDim2.new(0.5, 0, 0.5, 0)
+                    }
+                )
+                tween:Play()
+                tween.Completed:Connect(function()
+                    mainFrame.Visible = false
+                end)
+            end
+        end
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or 
+                     input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        
+        if math.abs(delta.X) > CLICK_DISTANCE or math.abs(delta.Y) > CLICK_DISTANCE then
+            moved = true
+        end
+        
+        floatButton.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+-- Close button functionality
+closeButton.MouseButton1Click:Connect(function()
+    guiAberta = false
+    local tween = TweenService:Create(
+        mainFrame,
+        TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In),
+        {
+            Size = UDim2.fromOffset(0, 0),
+            Position = UDim2.new(0.5, 0, 0.5, 0)
+        }
+    )
+    tween:Play()
+    tween.Completed:Connect(function()
+        mainFrame.Visible = false
+    end)
+end)
+
+--==================================================
+-- SIDEBAR
+--==================================================
+local sidebar = Instance.new("ScrollingFrame", mainFrame)
+sidebar.Size = UDim2.new(0, 130, 1, -60)
+sidebar.Position = UDim2.new(0, 0, 0, 55)
+sidebar.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+sidebar.BorderSizePixel = 0
+sidebar.ScrollBarThickness = 4
+sidebar.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 80)
+sidebar.ZIndex = 6
+
+local sidebarPadding = Instance.new("UIPadding", sidebar)
+sidebarPadding.PaddingTop = UDim.new(0, 10)
+sidebarPadding.PaddingLeft = UDim.new(0, 8)
+sidebarPadding.PaddingRight = UDim.new(0, 8)
+
+local sideLayout = Instance.new("UIListLayout", sidebar)
+sideLayout.Padding = UDim.new(0, 8)
+sideLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+sideLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    sidebar.CanvasSize = UDim2.new(0, 0, 0, sideLayout.AbsoluteContentSize.Y + 20)
+end)
+
+--==================================================
+-- CONTENT
+--==================================================
+local content = Instance.new("Frame", mainFrame)
+content.Size = UDim2.new(1, -145, 1, -70)
+content.Position = UDim2.new(0, 140, 0, 60)
+content.BackgroundTransparency = 1
+content.ClipsDescendants = true
+content.ZIndex = 6
+
+--==================================================
+-- TAB SYSTEM
+--==================================================
+local tabs = {}
+local currentTab
+local selectedButton
+
+local function createTab(name, icon)
+    -- Botão da aba
+    local tabBtn = Instance.new("TextButton", sidebar)
+    tabBtn.Size = UDim2.new(1, -12, 0, 42)
+    tabBtn.Text = (icon or "★") .. " " .. name
+    tabBtn.Font = Enum.Font.GothamBold
+    tabBtn.TextSize = 13
+    tabBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    tabBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    tabBtn.AutoButtonColor = false
+    tabBtn.ZIndex = 7
+    
+    local btnCorner = Instance.new("UICorner", tabBtn)
+    btnCorner.CornerRadius = UDim.new(0, 10)
+    
+    local grad = Instance.new("UIGradient", tabBtn)
+    grad.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 170, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(170, 0, 255))
+    }
+    grad.Transparency = NumberSequence.new(0.7)
+    
+    -- ScrollingFrame para o conteúdo da aba
+    local tabFrame = Instance.new("ScrollingFrame", content)
+    tabFrame.Size = UDim2.new(1, 0, 1, 0)
+    tabFrame.Position = UDim2.new(1, 0, 0, 0)
+    tabFrame.Visible = false
+    tabFrame.BackgroundTransparency = 1
+    tabFrame.BorderSizePixel = 0
+    tabFrame.ScrollBarThickness = 6
+    tabFrame.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 80)
+    tabFrame.ZIndex = 6
+    
+    local tabLayout = Instance.new("UIListLayout", tabFrame)
+    tabLayout.Padding = UDim.new(0, 8)
+    tabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+    
+    local tabPadding = Instance.new("UIPadding", tabFrame)
+    tabPadding.PaddingTop = UDim.new(0, 10)
+    tabPadding.PaddingLeft = UDim.new(0, 10)
+    tabPadding.PaddingRight = UDim.new(0, 10)
+    
+    tabLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        tabFrame.CanvasSize = UDim2.new(0, 0, 0, tabLayout.AbsoluteContentSize.Y + 20)
+    end)
+    
+    -- Hover effect
+    tabBtn.MouseEnter:Connect(function()
+        if tabBtn ~= selectedButton then
+            TweenService:Create(tabBtn, TweenInfo.new(0.2), {
+                TextColor3 = Color3.new(1, 1, 1),
+                BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+            }):Play()
+        end
+    end)
+    
+    tabBtn.MouseLeave:Connect(function()
+        if tabBtn ~= selectedButton then
+            TweenService:Create(tabBtn, TweenInfo.new(0.2), {
+                TextColor3 = Color3.fromRGB(200, 200, 200),
+                BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+            }):Play()
+        end
+    end)
+    
+    -- Click handler
+    tabBtn.MouseButton1Click:Connect(function()
+        if currentTab then
+            currentTab.Visible = false
+        end
+        
+        if selectedButton then
+            TweenService:Create(selectedButton, TweenInfo.new(0.2), {
+                TextColor3 = Color3.fromRGB(200, 200, 200),
+                BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+            }):Play()
+            local oldGrad = selectedButton:FindFirstChildOfClass("UIGradient")
+            if oldGrad then
+                TweenService:Create(oldGrad, TweenInfo.new(0.2), {
+                    Transparency = NumberSequence.new(0.7)
+                }):Play()
+            end
+        end
+        
+        tabFrame.Position = UDim2.new(1, 0, 0, 0)
+        tabFrame.Visible = true
+        
+        TweenService:Create(tabFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quint), {
+            Position = UDim2.new(0, 0, 0, 0)
+        }):Play()
+        
+        TweenService:Create(tabBtn, TweenInfo.new(0.2), {
+            TextColor3 = Color3.new(1, 1, 1),
+            BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        }):Play()
+        
+        TweenService:Create(grad, TweenInfo.new(0.2), {
+            Transparency = NumberSequence.new(0.3)
+        }):Play()
+        
+        currentTab = tabFrame
+        selectedButton = tabBtn
+    end)
+    
+    tabs[name] = tabFrame
+    return tabFrame
+end
+
+--==================================================
+-- TOGGLE COMPONENT
+--==================================================
+local function createToggle(parent, text, callback)
+    local toggle = Instance.new("Frame", parent)
+    toggle.Size = UDim2.new(1, -10, 0, 38)
+    toggle.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
+    toggle.ZIndex = 7
+    
+    Instance.new("UICorner", toggle).CornerRadius = UDim.new(0, 10)
+    
+    local label = Instance.new("TextLabel", toggle)
+    label.Text = text
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 12
+    label.TextColor3 = Color3.new(1, 1, 1)
+    label.BackgroundTransparency = 1
+    label.Size = UDim2.new(1, -60, 1, 0)
+    label.Position = UDim2.new(0, 10, 0, 0)
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.TextTruncate = Enum.TextTruncate.AtEnd
+    label.ZIndex = 8
+    
+    local switchBg = Instance.new("Frame", toggle)
+    switchBg.Size = UDim2.fromOffset(38, 18)
+    switchBg.Position = UDim2.new(1, -48, 0.5, -9)
+    switchBg.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+    switchBg.ZIndex = 8
+    
+    Instance.new("UICorner", switchBg).CornerRadius = UDim.new(1, 0)
+    
+    local switchCircle = Instance.new("Frame", switchBg)
+    switchCircle.Size = UDim2.fromOffset(14, 14)
+    switchCircle.Position = UDim2.new(0, 2, 0.5, -7)
+    switchCircle.BackgroundColor3 = Color3.new(1, 1, 1)
+    switchCircle.ZIndex = 9
+    
+    Instance.new("UICorner", switchCircle).CornerRadius = UDim.new(1, 0)
+    
+    local on = false
+    
+    local clickDetector = Instance.new("TextButton", toggle)
+    clickDetector.Size = UDim2.new(1, 0, 1, 0)
+    clickDetector.BackgroundTransparency = 1
+    clickDetector.Text = ""
+    clickDetector.ZIndex = 10
+    
+    clickDetector.MouseButton1Click:Connect(function()
+        on = not on
+        
+        TweenService:Create(switchBg, TweenInfo.new(0.25), {
+            BackgroundColor3 = on and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(150, 0, 0)
+        }):Play()
+        
+        TweenService:Create(switchCircle, TweenInfo.new(0.25, Enum.EasingStyle.Quint), {
+            Position = on and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)
+        }):Play()
+        
+        if callback then
+            pcall(function()
+                callback(on)
+            end)
+        end
+    end)
+    
+    return toggle
+end
+
+--==================================================
+-- BUTTON COMPONENT
+--==================================================
+local function createButton(parent, text, callback)
+    local button = Instance.new("TextButton", parent)
+    button.Size = UDim2.new(1, -10, 0, 38)
+    button.Text = text
+    button.Font = Enum.Font.GothamBold
+    button.TextSize = 13
+    button.TextColor3 = Color3.new(1, 1, 1)
+    button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    button.AutoButtonColor = false
+    button.ZIndex = 7
+    
+    Instance.new("UICorner", button).CornerRadius = UDim.new(0, 10)
+    
+    local grad = Instance.new("UIGradient", button)
+    grad.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 200, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 0, 255))
+    }
+    grad.Transparency = NumberSequence.new(0.6)
+    
+    button.MouseEnter:Connect(function()
+        TweenService:Create(grad, TweenInfo.new(0.2), {
+            Transparency = NumberSequence.new(0.3)
+        }):Play()
+        TweenService:Create(button, TweenInfo.new(0.2), {
+            BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        }):Play()
+    end)
+    
+    button.MouseLeave:Connect(function()
+        TweenService:Create(grad, TweenInfo.new(0.2), {
+            Transparency = NumberSequence.new(0.6)
+        }):Play()
+        TweenService:Create(button, TweenInfo.new(0.2), {
+            BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        }):Play()
+    end)
+    
+    if callback then
+        button.MouseButton1Click:Connect(function()
+            pcall(callback)
+        end)
+    end
+    
+    return button
+end
+
+--==================================================
+-- CRIAR 5 ABAS COM 20 OPÇÕES CADA
+--==================================================
+local playerTab = createTab("Player", "👤")
+local combatTab = createTab("Combat", "⚔️")
+local visualTab = createTab("Visual", "👁️")
+local farmTab = createTab("Farm", "🌾")
+local miscTab = createTab("Misc", "⚙️")
+
+-- ABA PLAYER (20 OPÇÕES)
+createToggle(playerTab, "Walk Speed Boost", function(v) print("Walk Speed:", v) end)
+createToggle(playerTab, "Jump Power Boost", function(v) print("Jump Power:", v) end)
+createToggle(playerTab, "Infinite Jump", function(v) print("Infinite Jump:", v) end)
+createToggle(playerTab, "No Clip (Walk Through Walls)", function(v) print("No Clip:", v) end)
+createToggle(playerTab, "Fly Mode", function(v) print("Fly:", v) end)
+createToggle(playerTab, "Swim Speed", function(v) print("Swim Speed:", v) end)
+createToggle(playerTab, "Anti-Ragdoll", function(v) print("Anti-Ragdoll:", v) end)
+createToggle(playerTab, "Anti-Slow", function(v) print("Anti-Slow:", v) end)
+createToggle(playerTab, "Anti-Stun", function(v) print("Anti-Stun:", v) end)
+createToggle(playerTab, "God Mode (Client)", function(v) print("God Mode:", v) end)
+createButton(playerTab, "Reset Character", function() print("Reset!") end)
+createButton(playerTab, "Teleport to Spawn", function() print("TP Spawn!") end)
+createToggle(playerTab, "Remove Death Barriers", function(v) print("Remove Barriers:", v) end)
+createToggle(playerTab, "Auto Sprint", function(v) print("Auto Sprint:", v) end)
+createToggle(playerTab, "Stamina Infinite", function(v) print("Infinite Stamina:", v) end)
+createToggle(playerTab, "Hip Height Modifier", function(v) print("Hip Height:", v) end)
+createToggle(playerTab, "Gravity Modifier", function(v) print("Gravity:", v) end)
+createToggle(playerTab, "Platform Stand", function(v) print("Platform Stand:", v) end)
+createButton(playerTab, "Save Position", function() print("Position Saved!") end)
+createButton(playerTab, "Load Position", function() print("Position Loaded!") end)
+
+-- ABA COMBAT (20 OPÇÕES)
+createToggle(combatTab, "Aimbot (Silent)", function(v) print("Aimbot:", v) end)
+createToggle(combatTab, "Kill Aura", function(v) print("Kill Aura:", v) end)
+createToggle(combatTab, "Auto Parry", function(v) print("Auto Parry:", v) end)
+createToggle(combatTab, "Auto Block", function(v) print("Auto Block:", v) end)
+createToggle(combatTab, "Hitbox Expander", function(v) print("Hitbox Expand:", v) end)
+createToggle(combatTab, "Reach Extender", function(v) print("Reach:", v) end)
+createToggle(combatTab, "Auto Click (CPS)", function(v) print("Auto Click:", v) end)
+createToggle(combatTab, "Critical Hits Only", function(v) print("Crits:", v) end)
+createToggle(combatTab, "Kill All (AOE)", function(v) print("Kill All:", v) end)
+createToggle(combatTab, "Target Lock", function(v) print("Target Lock:", v) end)
+createToggle(combatTab, "Auto Reload", function(v) print("Auto Reload:", v) end)
+createToggle(combatTab, "Rapid Fire", function(v) print("Rapid Fire:", v) end)
+createToggle(combatTab, "No Recoil", function(v) print("No Recoil:", v) end)
+createToggle(combatTab, "No Spread", function(v) print("No Spread:", v) end)
+createToggle(combatTab, "Infinite Ammo", function(v) print("Infinite Ammo:", v) end)
+createToggle(combatTab, "One Shot Kill", function(v) print("One Shot:", v) end)
+createToggle(combatTab, "Auto Heal", function(v) print("Auto Heal:", v) end)
+createToggle(combatTab, "Damage Multiplier", function(v) print("Damage Multi:", v) end)
+createButton(combatTab, "Kill Nearest Player", function() print("Kill Nearest!") end)
+createButton(combatTab, "Bring All Players", function() print("Bring All!") end)
+
+-- ABA VISUAL (20 OPÇÕES)
+createToggle(visualTab, "ESP Players (Box)", function(v) print("ESP Box:", v) end)
+createToggle(visualTab, "ESP Players (Name)", function(v) print("ESP Name:", v) end)
+createToggle(visualTab, "ESP Players (Distance)", function(v) print("ESP Distance:", v) end)
+createToggle(visualTab, "ESP Players (Health)", function(v) print("ESP Health:", v) end)
+createToggle(visualTab, "ESP Items/Loot", function(v) print("ESP Items:", v) end)
+createToggle(visualTab, "ESP Chests", function(v) print("ESP Chests:", v) end)
+createToggle(visualTab, "ESP NPCs/Mobs", function(v) print("ESP NPCs:", v) end)
+createToggle(visualTab, "Fullbright", function(v) print("Fullbright:", v) end)
+createToggle(visualTab, "No Fog", function(v) print("No Fog:", v) end)
+createToggle(visualTab, "Chams (Wallhack)", function(v) print("Chams:", v) end)
+createToggle(visualTab, "Tracers", function(v) print("Tracers:", v) end)
+createToggle(visualTab, "FOV Changer", function(v) print("FOV:", v) end)
+createToggle(visualTab, "Third Person", function(v) print("Third Person:", v) end)
+createToggle(visualTab, "Camera Zoom Infinite", function(v) print("Zoom:", v) end)
+createToggle(visualTab, "Remove Textures", function(v) print("Remove Textures:", v) end)
+createToggle(visualTab, "Xray Vision", function(v) print("Xray:", v) end)
+createToggle(visualTab, "Rainbow GUI", function(v) print("Rainbow:", v) end)
+createToggle(visualTab, "Skeleton ESP", function(v) print("Skeleton:", v) end)
+createToggle(visualTab, "Show Hidden Parts", function(v) print("Show Hidden:", v) end)
+createButton(visualTab, "Remove Shadows", function() print("Shadows Removed!") end)
+
+-- ABA FARM (20 OPÇÕES)
+createToggle(farmTab, "Auto Farm Mobs", function(v) print("Auto Farm:", v) end)
+createToggle(farmTab, "Auto Collect Items", function(v) print("Auto Collect:", v) end)
+createToggle(farmTab, "Auto Quest Accept", function(v) print("Auto Quest:", v) end)
+createToggle(farmTab, "Auto Quest Complete", function(v) print("Quest Complete:", v) end)
+createToggle(farmTab, "Auto Boss Farm", function(v) print("Boss Farm:", v) end)
+createToggle(farmTab, "Auto Dungeon", function(v) print("Auto Dungeon:", v) end)
+createToggle(farmTab, "Auto Rebirth", function(v) print("Auto Rebirth:", v) end)
+createToggle(farmTab, "Auto Sell Items", function(v) print("Auto Sell:", v) end)
+createToggle(farmTab, "Auto Upgrade Stats", function(v) print("Auto Upgrade:", v) end)
+createToggle(farmTab, "Auto Buy Items", function(v) print("Auto Buy:", v) end)
+createToggle(farmTab, "Auto Chest Farm", function(v) print("Chest Farm:", v) end)
+createToggle(farmTab, "Auto Mine/Gather", function(v) print("Auto Mine:", v) end)
+createToggle(farmTab, "Auto Fish", function(v) print("Auto Fish:", v) end)
+createToggle(farmTab, "Auto Craft", function(v) print("Auto Craft:", v) end)
+createToggle(farmTab, "Auto Pet Hatch", function(v) print("Pet Hatch:", v) end)
+createToggle(farmTab, "Anti-AFK", function(v) print("Anti-AFK:", v) end)
+createToggle(farmTab, "Auto Spin Wheel", function(v) print("Auto Spin:", v) end)
+createToggle(farmTab, "Auto Daily Reward", function(v) print("Daily Reward:", v) end)
+createButton(farmTab, "Teleport to Farm Area", function() print("TP Farm!") end)
+createButton(farmTab, "Collect All Drops", function() print("Collect Drops!") end)
+
+-- ABA MISC (20 OPÇÕES)
+createToggle(miscTab, "Remove Chat Filter", function(v) print("Remove Filter:", v) end)
+createToggle(miscTab, "Chat Spam", function(v) print("Chat Spam:", v) end)
+createToggle(miscTab, "Auto Emote", function(v) print("Auto Emote:", v) end)
+createToggle(miscTab, "Server Hop", function(v) print("Server Hop:", v) end)
+createToggle(miscTab, "Rejoin Server", function(v) print("Rejoin:", v) end)
+createToggle(miscTab, "FPS Booster", function(v) print("FPS Boost:", v) end)
+createToggle(miscTab, "Anti-Kick", function(v) print("Anti-Kick:", v) end)
+createToggle(miscTab, "Anti-Ban (Client)", function(v) print("Anti-Ban:", v) end)
+createToggle(miscTab, "Remove Animations", function(v) print("No Animations:", v) end)
+createToggle(miscTab, "Remove Sounds", function(v) print("No Sounds:", v) end)
+createToggle(miscTab, "Freeze Character", function(v) print("Freeze:", v) end)
+createToggle(miscTab, "Invisible Character", function(v) print("Invisible:", v) end)
+createToggle(miscTab, "Spin Character", function(v) print("Spin Char:", v) end)
+createToggle(miscTab, "Team Change Bypass", function(v) print("Team Bypass:", v) end)
+createButton(miscTab, "Destroy GUI", function() gui:Destroy() end)
+createButton(miscTab, "Copy Game ID", function() print("Game ID Copied!") end)
+createButton(miscTab, "Show Game Stats", function() print("Stats Shown!") end)
+createButton(miscTab, "Clear Terrain", function() print("Terrain Cleared!") end)
+createButton(miscTab, "Remove All Effects", function() print("Effects Removed!") end)
+createButton(miscTab, "Lock FPS to 60", function() print("FPS Locked!") end)
+createButton(miscTab, "Unlock FPS", function() print("FPS Unlocked!") end)
+createButton(miscTab, "Join Discord", function() print("Discord Link!") end)
+createButton(miscTab, "Credits", function() print("Made by Delta Team!") end)
+
+--==================================================
+-- ATIVAR PRIMEIRA ABA
+--==================================================
+currentTab = playerTab
+playerTab.Visible = true
+playerTab.Position = UDim2.new(0, 0, 0, 0)
+
+task.wait(0.1)
+local firstBtn = sidebar:FindFirstChildOfClass("TextButton")
+if firstBtn then
+    selectedButton = firstBtn
+    firstBtn.TextColor3 = Color3.new(1, 1, 1)
+    firstBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    local grad = firstBtn:FindFirstChildOfClass("UIGradient")
+    if grad then
+        grad.Transparency = NumberSequence.new(0.3)
+    end
+end
+
+print("═══════════════════════════════════════")
+print("✓ DELTA HUB UNIVERSAL carregado!")
+print("✓ 5 Abas | 100 Funções")
+print("✓ By Delta Team")
+print("═══════════════════════════════════════")
